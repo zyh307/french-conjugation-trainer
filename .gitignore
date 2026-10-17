@@ -1,0 +1,17 @@
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
+.eggs/
+*.exe
+.env
+.venv/
+*.json
+*.json.bak
+!.wordlists/**/*.json
+.DS_Store
+Thumbs.db
