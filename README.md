@@ -1,8 +1,21 @@
-# 法语变位器 3.0 · Conjugaison
+# 法语变位器
 
 法语变位练习器的 Liquid Glass 视觉重构。React 界面搭配原版 Python 学习核心，采用系统字体、半透明玻璃、低饱和灰绿配色和 200–400ms 交互过渡，不包含气象图案。
 
+## 下载
+
+在 [最新版发布页](https://github.com/zyh307/french-conjugation-trainer/releases/latest) 选择对应版本：
+
+- **电脑版（Windows 10/11，64 位）**：下载 `french-conjugation-trainer-3.0.5-windows-x64.zip`，完整解压后双击“启动法语变位器.bat”。已内置运行环境，无需安装 Node.js、Python 或项目依赖。
+- **手机版（Android／安卓 8.0+）**：下载 `french-conjugation-trainer-3.0.5.apk`，在手机上打开安装；已安装旧版可直接覆盖安装。
+
+电脑版学习记录保存在解压文件夹的 `data/` 中。更新时保留原来的 `data/`，不要直接在压缩包内运行。电脑与手机的记录各自独立。
+
+开发者在 Windows 64 位 Python 环境执行 `npm run build:desktop` 可生成电脑版运行包，输出至 `电脑运行包/`。
+
 ## 启动
+
+以下命令用于源码开发；直接使用电脑版运行包时无需执行。
 
 需要 **Node.js 20.19+** 与 **Python 3.10+**。本机可自动识别已有 Python。
 

@@ -8,6 +8,7 @@
     "build": "vite build",
     "build:mobile": "node scripts/export-wordlists.mjs && vite build --mode mobile --outDir dist-mobile",
     "build:apk": "node scripts/build-android.mjs",
+    "build:desktop": "node scripts/build-desktop.mjs",
     "test:device": "node --test tests/device.test.mjs",
     "start": "node scripts/start.mjs",
     "test": "node scripts/test.mjs"

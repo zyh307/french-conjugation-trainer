@@ -16,3 +16,5 @@ tests/.tmp/
 .venv/
 preview-*.png
 *.log
+.desktop-build/
+电脑运行包/*.zip
