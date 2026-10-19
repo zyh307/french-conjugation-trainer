@@ -1,0 +1,25 @@
+{
+  "name": "conjugaison-studio",
+  "private": true,
+  "version": "3.0.5",
+  "type": "module",
+  "scripts": {
+    "dev": "node scripts/start.mjs --dev",
+    "build": "vite build",
+    "build:mobile": "node scripts/export-wordlists.mjs && vite build --mode mobile --outDir dist-mobile",
+    "build:apk": "node scripts/build-android.mjs",
+    "test:device": "node --test tests/device.test.mjs",
+    "start": "node scripts/start.mjs",
+    "test": "node scripts/test.mjs"
+  },
+  "dependencies": {
+    "lucide-react": "^0.468.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "@playwright/test": "^1.51.0",
+    "vite": "^6.0.5"
+  }
+}

@@ -1,0 +1,19 @@
+// Public-domain French originals; Chinese explanations are written for this app.
+export const shareQuotes = [
+  { text: 'Rien ne sert de courir ; il faut partir à point.', translation: '不必一味赶路，按自己的节奏出发。', author: 'Jean de La Fontaine', work: 'Le Lièvre et la Tortue', source: 'https://fr.wikisource.org/wiki/Le_Li%C3%A8vre_et_la_Tortue' },
+  { text: 'Patience et longueur de temps font plus que force ni que rage.', translation: '耐心与时间，比蛮力与急躁更有力量。', author: 'Jean de La Fontaine', work: 'Le Lion et le Rat', source: 'https://fr.wikisource.org/wiki/Fables_de_La_Fontaine_(%C3%A9d._1874)/Le_Lion_et_le_Rat' },
+  { text: 'Je pense, donc je suis.', translation: '我思，故我在。', author: 'René Descartes', work: 'Discours de la méthode', source: 'https://fr.wikisource.org/wiki/Discours_de_la_m%C3%A9thode_(%C3%A9d._Cousin)/Quatri%C3%A8me_partie' },
+  { text: 'Il faut cultiver notre jardin.', translation: '用心耕耘，属于自己的那一方天地。', author: 'Voltaire', work: 'Candide', source: 'https://fr.wikisource.org/wiki/Candide%2C_ou_l%E2%80%99Optimisme/Garnier_1877/Texte_entier' },
+  { text: 'À vaincre sans péril, on triomphe sans gloire.', translation: '经得起挑战的胜利，才值得骄傲。', author: 'Pierre Corneille', work: 'Le Cid', source: 'https://fr.wikisource.org/wiki/Le_Cid/%C3%89dition_Ginn/Acte_II' },
+  { text: 'Hâtez-vous lentement.', translation: '从容地向前，不必急于求成。', author: 'Nicolas Boileau', work: 'L’Art poétique', source: 'https://fr.wikisource.org/wiki/L%E2%80%99Art_po%C3%A9tique/Chant_I' },
+  { text: 'Avant donc que d’écrire apprenez à penser.', translation: '在动笔之前，先学会思考。', author: 'Nicolas Boileau', work: 'L’Art poétique', source: 'https://fr.wikisource.org/wiki/L%E2%80%99Art_po%C3%A9tique/Chant_I' },
+  { text: 'Vingt fois sur le métier remettez votre ouvrage.', translation: '反复打磨，才能让作品日臻完善。', author: 'Nicolas Boileau', work: 'L’Art poétique', source: 'https://fr.wikisource.org/wiki/L%E2%80%99Art_po%C3%A9tique/Chant_I' },
+  { text: 'Les grandes pensées viennent du cœur.', translation: '伟大的思想，来自内心。', author: 'Vauvenargues', work: 'Réflexions et Maximes', source: 'https://fr.wikisource.org/wiki/R%C3%A9flexions_et_Maximes_(Vauvenargues)/1-330' },
+  { text: 'Le courage a plus de ressources contre les disgrâces que la raison.', translation: '面对逆境，勇气比理性更有办法。', author: 'Vauvenargues', work: 'Réflexions et Maximes', source: 'https://fr.wikisource.org/wiki/R%C3%A9flexions_et_Maximes_(Vauvenargues)/1-330' },
+  { text: 'Il faut manger pour vivre, et non pas vivre pour manger.', translation: '吃饭是为了生活，而不是为吃饭而活。', author: 'Molière', work: 'L’Avare', source: 'https://fr.wikisource.org/wiki/L%E2%80%99Avare_(Moli%C3%A8re)/%C3%89dition_Louandre,_1910/Acte_III' },
+  { text: 'Pour être heureux, il ne faut pas désirer de l’être plus que les autres.', translation: '想要幸福，就别追求比别人更幸福。', author: 'Montesquieu', work: 'Pensées', source: 'https://fr.wikisource.org/wiki/Pens%C3%A9es_et_Fragments_in%C3%A9dits_de_Montesquieu/VI' },
+  { text: 'On n’est jamais si heureux ni si malheureux qu’on s’imagine.', translation: '幸福与不幸，往往没有想象中那么极端。', author: 'La Rochefoucauld', work: 'Maximes', source: 'https://fr.wikisource.org/wiki/Page:La_Rochefoucauld_-_%C5%92uvres,_Hachette,_t1,_1868.djvu/187' },
+  { text: 'Le monde réel a ses bornes, le monde imaginaire est infini.', translation: '现实世界有边界，想象的世界却无穷。', author: 'Jean-Jacques Rousseau', work: 'Émile', source: 'https://fr.wikisource.org/wiki/%C3%89mile,_ou_De_l%E2%80%99%C3%A9ducation/%C3%89dition_1852/Livre_II' },
+  { text: 'Que sais-je ?', translation: '我究竟知道些什么？', author: 'Michel de Montaigne', work: 'Essais', source: 'https://fr.wikisource.org/wiki/Essais/%C3%A9dition_Michaud,_1907/Texte_modernis%C3%A9/Livre_II/Chapitre_12' },
+];
+export function nextQuote(index = -1) { return index < 0 ? Math.floor(Math.random() * shareQuotes.length) : (index + 1 + Math.floor(Math.random() * (shareQuotes.length - 1))) % shareQuotes.length; }
