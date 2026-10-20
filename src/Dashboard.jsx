@@ -1,20 +1,21 @@
 import { ArrowUpRight, ArrowRight, BookOpen, Check, CheckCheck, Clock3, Layers3, Play, Repeat2, Target, TrendingUp, ChevronRight } from 'lucide-react';
 import { Button, Ring, Progress } from './components.jsx';
 import DailyGoal from './DailyGoal.jsx';
-import { todayKey, groupedMastered, tenseFrench } from './api.js';
+import { todayKey, groupedMastered, tenseFrench, notebookFor } from './api.js';
 
 export default function Dashboard({ state, navigate, openVerb, start, mutate, busy }) {
   const { stats, history, mastered, review, wordlists, active } = state;
   const today = history[todayKey()] || { total: 0, correct: 0 };
   const rate = stats.total ? Math.round(stats.correct / stats.total * 100) : 0;
-  const groups = groupedMastered(mastered);
+  const groups = groupedMastered(mastered).filter(m => notebookFor(state, m.verbe, m.temps) === 'known');
+  const dueGroups = new Set(review.map(m => `${m.verbe}|${m.temps}`)).size;
   const recent = wordlists.filter(w => w.level === '必会');
   const date = new Date().toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'long' });
   const metrics = [
     { label: '累计练习', value: stats.total, unit: '题', icon: Layers3, color: 'sage', detail: '每一道，都算数', page: 'learn' },
     { label: '答题正确率', value: stats.total ? rate : '—', unit: stats.total ? '%' : '', icon: Target, color: 'lavender', detail: stats.total ? `${stats.correct} 道正确 · ${stats.total} 道练习` : '从第一组练习开始', page: 'learn' },
-    { label: '已掌握词条', value: groups.length, unit: '组', icon: CheckCheck, color: 'sand', detail: `${mastered.length} 个人称变位已掌握`, page: 'mastered' },
-    { label: '等待复习', value: review.length, unit: '项', icon: Repeat2, color: 'rose', detail: review.length ? '给记忆一点温柔的提醒' : '记忆在慢慢沉淀', page: 'review' },
+    { label: '已会词条', value: groups.length, unit: '组', icon: CheckCheck, color: 'sand', detail: '不再安排复习', page: 'mastered' },
+    { label: '等待复习', value: dueGroups, unit: '组', icon: Repeat2, color: 'rose', detail: review.length ? '给记忆一点温柔的提醒' : '记忆在慢慢沉淀', page: 'review' },
   ];
 
   return <div className="page-enter dashboard">

@@ -11,6 +11,72 @@ function setup(clock) {
   return { studio: new DeviceStudio(wordlists, storage, clock), storage };
 }
 const solve = (studio, q) => studio.request('session/answer', { id: q.id, answer: q.round === 'reverse' ? q.personne : studio.forms(q.verbe, q.temps, q.level)[q.personne] });
+
+test('familiar judgment enters known book, never review; other tense stays in practice', () => {
+  let now = new Date(2026, 9, 1); const { studio } = setup(() => now);
+  const q = studio.request('session/start', { count: 1 });
+  studio.request('session/answer', { id: q.id, choice: 1 });
+  assert.ok(studio.read().mastered.every(m => m.known));
+  now = new Date(2026, 9, 2);
+  assert.equal(studio.request('state').review.length, 0);
+  assert.ok(studio.read().mastered.every(m => m.temps === q.temps));
+});
+
+test('notebook moves are exclusive, idempotent, per tense and preserve unrelated progress', () => {
+  let now = new Date(2026, 9, 1); const { studio, storage } = setup(() => now);
+  const q = studio.request('session/start', { count: 6 });
+  const other = q.batch_verbs.find(v => v !== q.verbe);
+  const before = studio.read().active.schedule.groups.flatMap(g => g.entries).filter(e => e.verbe !== other);
+  studio.request('notebooks/move', { keys: [`${other}|现在时`], target: 'review' });
+  assert.equal(studio.read().active.question.id, q.id);
+  const after = studio.read().active.schedule.groups.flatMap(g => g.entries);
+  assert.deepEqual(after, before);
+  assert.equal(studio.read().mastered.length, 6);
+  now = new Date(2026, 9, 2);
+  studio.request('notebooks/move', { keys: [`${other}|现在时`], target: 'review' });
+  assert.ok(studio.read().mastered.every(m => m.date_learned === '2026-10-01'));
+  assert.equal(studio.request('state').review.length, 6);
+  studio.request('notebooks/move', { keys: [`${other}|现在时`], target: 'known' });
+  assert.equal(studio.request('state').review.length, 0);
+  assert.equal(studio.read().mastered.length, 6);
+  studio.request('favorites/toggle', { verb: other, tense: '现在时', saved: true });
+  studio.request('favorites/toggle', { verb: other, tense: '现在时', saved: true });
+  assert.equal(studio.request('state').favorites.length, 1);
+  studio.request('notebooks/move', { keys: [`${other}|现在时`], target: 'practice' });
+  assert.equal(studio.read().mastered.length, 0);
+  assert.equal(studio.request('session/resume').id, q.id);
+  assert.ok(studio.read().settings.priority_learn.includes(`${other}|现在时|je`));
+  assert.equal(new DeviceStudio(wordlists, storage).request('state').favorites.length, 1);
+});
+
+test('review book promotes after 30 days including skipped days; partial words stay in practice', () => {
+  let now = new Date(2026, 9, 1); const { studio } = setup(() => now);
+  studio.request('notebooks/move', { keys: ['être|现在时'], target: 'review' });
+  now = new Date(2026, 9, 29);
+  assert.ok(studio.request('state').mastered.every(m => !m.known));
+  now = new Date(2026, 10, 5);
+  assert.ok(studio.request('state').mastered.every(m => m.known));
+  assert.equal(studio.request('state').review.length, 0);
+  const data = studio.read();
+  data.mastered.push({ verbe: 'avoir', temps: '现在时', personne: 'je', date_learned: '2026-10-01' });
+  studio.write(data);
+  assert.equal(studio.request('state').mastered.find(m => m.verbe === 'avoir').known, undefined);
+});
+
+test('moving during direct practice skips only that pair and known repractice preserves dates', () => {
+  const { studio } = setup();
+  studio.request('favorites/toggle', { verb: 'être', tense: '现在时', saved: true });
+  studio.request('favorites/toggle', { verb: 'être', tense: '复合过去时', saved: true });
+  studio.request('session/start', { favorites: true });
+  let q = studio.request('notebooks/move', { keys: ['être|现在时'], target: 'known' }).next;
+  assert.equal(q.temps, '复合过去时');
+  while (!q.completed) q = solve(studio, q).next;
+  const before = studio.read().mastered.filter(m => m.temps === '现在时');
+  q = studio.request('session/start', { verb: 'être', tense: '现在时' });
+  while (!q.completed) q = solve(studio, q).next;
+  assert.deepEqual(studio.read().mastered.filter(m => m.temps === '现在时'), before);
+  assert.equal(studio.request('state').favorites.length, 2);
+});
 test('direct practice skips judging, isolates the tense, resumes and keeps the regular session', () => {
   const { studio, storage } = setup();
   const regular = studio.request('session/start', { count: 3 });
@@ -99,7 +165,7 @@ test('favorites survive reload, practice across levels and tenses, record comple
   let favorites = studio.request('state').favorites;
   assert.ok(favorites.every(f => f.practice_count === 1 && f.last_practiced));
   assert.deepEqual(studio.read().progress, saved);
-  assert.equal(studio.request('session/start', {}).id, regular.id);
+  assert.notEqual(studio.request('session/start', {}).verbe, 'être');
   q = studio.request('session/start', { verb: 'être', tense: '现在时' });
   const stale = q;
   while (!q.completed) q = solve(studio, q).next;
@@ -166,7 +232,7 @@ test('disabled rounds, all known verbs and stale answer protection', () => {
 });
 test('scheduled reviews advance and return on subsequent intervals', () => {
   let now = new Date(2026, 9, 19, 10); const { studio } = setup(() => now);
-  let q = studio.request('session/start', { count: 1 }); studio.request('session/answer', { id: q.id, choice: 1 });
+  let q = studio.request('session/start', { verb: 'être', tense: '现在时' }); while (!q.completed) q = solve(studio, q).next;
   now = new Date(2026, 9, 20, 10); assert.equal(studio.request('state').review.length, 6);
   q = studio.request('session/start', { mode: 'review' });
   for (let i = 0; i < 6; i++) q = solve(studio, q).next;
@@ -241,7 +307,7 @@ test('share counts distinct completed verbs and retains cumulative learning afte
 });
 test('today share count includes a completed review and never inflates for repeated practice', () => {
   let now = new Date(2026, 9, 19, 10); const { studio } = setup(() => now);
-  let q = studio.request('session/start', { count: 1 }); studio.request('session/answer', { id: q.id, choice: 1 });
+  let q = studio.request('session/start', { verb: 'être', tense: '现在时' }); while (!q.completed) q = solve(studio, q).next;
   assert.equal(studio.request('share').today_words, 1);
   now = new Date(2026, 9, 20, 10); assert.equal(studio.request('share').today_words, 0);
   q = studio.request('session/start', { mode: 'review' });

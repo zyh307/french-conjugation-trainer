@@ -15,6 +15,11 @@ export const personLabel = p => ({ il: 'il / elle', ils: 'ils / elles' }[p] || p
 export const tenses = ['现在时', '复合过去时', '未完成过去时'];
 export const tenseFrench = { '现在时': 'Présent', '复合过去时': 'Passé composé', '未完成过去时': 'Imparfait' };
 export const levels = ['必会', '常用', '生僻'];
+export const notebookNames = { practice: '练习本', review: '复习本', known: '已会本' };
+export function notebookFor(state, verb, tense) {
+  const items = state.mastered.filter(m => m.verbe === verb && m.temps === tense);
+  return persons.every(p => items.some(m => m.personne === p)) ? (items.some(m => m.known) ? 'known' : 'review') : 'practice';
+}
 export const roundNames = { judge: '掌握度判断', reverse: '反向选择', choice: '选择变位', fill: '拼写练习' };
 export const normalize = value => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase();
 export function todayKey(offset = 0) {

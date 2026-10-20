@@ -32,7 +32,7 @@ test('offline Android assets, three-verb order, compact question and persisted p
     await expect(page.locator('.practice-card-top .soft-badge')).toHaveText('掌握度判断');
     verbs.push(await page.locator('.practice-question h1').innerText());
     // All three actions must fit without scrolling this 390 x 844 screen.
-    const bounds = await page.getByRole('button', { name: '已经掌握', exact: true }).boundingBox();
+    const bounds = await page.getByRole('button', { name: '熟悉，加入已会', exact: true }).boundingBox();
     expect(bounds.y + bounds.height).toBeLessThan(790);
     if (i === 0) await page.screenshot({ path: 'preview-mobile-practice.png', fullPage: true });
     await page.getByRole('button', { name: '还不熟悉', exact: true }).click();

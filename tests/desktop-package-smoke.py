@@ -69,6 +69,9 @@ with tempfile.TemporaryDirectory(prefix='desktop-', dir=workspace) as temporary:
             assert count == 18
             assert api('state')['favorites'][0]['practice_count'] == 1
             assert len(api('state')['mastered']) == 6
+            assert not any(m.get('known') for m in api('state')['mastered'])
+            api('notebooks/move', {'keys': ['être|现在时'], 'target': 'known'})
+            assert all(m['known'] for m in api('state')['mastered'])
         finally:
             process.terminate()
             process.wait(timeout=5)
@@ -77,7 +80,8 @@ with tempfile.TemporaryDirectory(prefix='desktop-', dir=workspace) as temporary:
             state = api('state')
             assert state['favorites'][0]['practice_count'] == 1
             assert len(state['mastered']) == 6
+            assert all(m['known'] for m in state['mastered'])
         finally:
             process.terminate()
             process.wait(timeout=5)
-    print('Windows ZIP verified: bundled runtime, page title, 9 wordlists, 18 answers, favorites and restart persistence.')
+    print('Windows ZIP verified: bundled runtime, page title, 9 wordlists, 18 answers, favorites, notebooks and restart persistence.')

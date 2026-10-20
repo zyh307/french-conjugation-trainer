@@ -82,9 +82,16 @@ export class DeviceStudio {
     const today = this.today();
     const now = Date.parse(today + 'T00:00:00Z');
     data.review = [];
+    const groups = new Map();
+    for (const m of data.mastered) { const id = key(m.verbe, m.temps); if (!groups.has(id)) groups.set(id, []); groups.get(id).push(m); }
+    for (const items of groups.values()) {
+      const complete = PERSONS.filter(p => this.forms(items[0].verbe, items[0].temps)[p]).every(p => items.some(m => m.personne === p));
+      if (complete && (items.some(m => m.known) || items.every(m => Math.floor((now - Date.parse(m.date_learned + 'T00:00:00Z')) / 86400000) + 1 >= 30))) for (const m of items) m.known = true;
+    }
     for (const item of data.mastered) {
       item.days = Math.floor((now - Date.parse(item.date_learned + 'T00:00:00Z')) / 86400000) + 1;
-      item.needs_review = [2, 4, 7, 15, 30].includes(item.days) && item.last_review_day !== today;
+      const complete = PERSONS.filter(p => this.forms(item.verbe, item.temps)[p]).every(p => groups.get(key(item.verbe, item.temps)).some(m => m.personne === p));
+      item.needs_review = complete && !item.known && [2, 4, 7, 15].includes(item.days) && item.last_review_day !== today;
       if (item.needs_review) data.review.push({ verbe: item.verbe, temps: item.temps, personne: item.personne, due_date: today });
     }
   }
@@ -164,7 +171,18 @@ export class DeviceStudio {
     const s = data.active;
     if (s?.mode === 'learn' && !s.direct) data.progress[key(s.level, s.temps)] = clone(s);
   }
-  returnWords(data, selected) {
+  pruneCompleted(data, session) {
+    if (!session || session.direct) return;
+    const selected = new Set();
+    for (const m of data.mastered) {
+      const items = data.mastered.filter(e => e.verbe === m.verbe && e.temps === m.temps);
+      if (PERSONS.filter(p => this.forms(m.verbe, m.temps)[p]).every(p => items.some(e => e.personne === p)) && (session.mode !== 'review' || m.known)) selected.add(key(m.verbe, m.temps));
+    }
+    if (session.mode === 'review') session.items = session.items.filter(e => !selected.has(key(e.verbe, e.temps)));
+    else new GroupedPractice([], session.settings, session.schedule).removeWords(selected);
+    if (session.question && selected.has(key(session.question.verbe, session.question.temps))) delete session.question;
+  }
+  returnWords(data, selected, removeOnly = false) {
     function affected(e) { return selected.has(key(e.verbe, e.temps)); }
     const patch = session => {
       if (!session) return session;
@@ -191,7 +209,7 @@ export class DeviceStudio {
       if (!entries.length) return session;
       this.ensureSchedule(session);
       const scheduler = new GroupedPractice([], session.settings, session.schedule);
-      scheduler.returnWords(entries);
+      if (removeOnly) scheduler.removeWords(selected); else scheduler.returnWords(entries);
       const current = scheduler.current();
       session.queue = current ? [current] : []; session.post_entries = [];
       session.pending_groups = session.schedule.groups.slice(session.schedule.cursor + 1);
@@ -226,6 +244,8 @@ export class DeviceStudio {
     if (!s) return { completed: true };
     let q;
     if (s.mode === 'review') {
+      this.updateReview(data);
+      s.items = s.items.filter(e => !data.mastered.some(m => m.verbe === e.verbe && m.temps === e.temps && m.known));
       if (!s.items.length) return this.finish(data);
       q = { ...s.items[0], round: 'fill', mode: 'review', done: s.done, total: s.total };
     } else {
@@ -269,6 +289,7 @@ export class DeviceStudio {
       require([1, 2, 3].includes(body.choice), '请选择掌握程度。');
       if (body.choice === 1) {
         for (const p of entry.personnes) this.addMastery(data, entry, p);
+        for (const m of data.mastered.filter(m => m.verbe === q.verbe && m.temps === q.temps)) m.known = true;
       }
       if (body.choice !== 1 && !['reverse', 'choice', 'fill'].some(r => s.settings['enable_' + r])) for (const p of entry.personnes) this.addMastery(data, entry, p);
       scheduler.judge(body.choice); s.done++;
@@ -285,6 +306,7 @@ export class DeviceStudio {
   }
   request(path, body = {}) {
     const data = this.read(); let result;
+    this.updateReview(data);
     if (data.active?.mode === 'learn') this.ensureSchedule(data.active);
     if (path === 'state') result = this.snapshot(data);
     else if (path === 'share') result = this.shareStats(data);
@@ -297,8 +319,40 @@ export class DeviceStudio {
       else delete favorites[id];
       result = { ok: true };
     }
-    else if (path === 'session/start') result = this.start(data, body);
-    else if (path === 'session/resume') result = data.active?.question || this.next(data);
+    else if (path === 'notebooks/move') {
+      let selected = new Set(body.keys || []);
+      require(selected.size > 0 && ['practice', 'review', 'known'].includes(body.target), '请选择有效的词条和目标本。');
+      for (const id of selected) { const [v, t, extra] = id.split('|'); require(!extra && TENSES.includes(t) && Boolean(this.forms(v, t).je), '请选择有效的动词和时态。'); }
+      selected = new Set([...selected].filter(id => {
+        const [v, t] = id.split('|'), items = data.mastered.filter(m => key(m.verbe, m.temps) === id);
+        const complete = PERSONS.filter(p => this.forms(v, t)[p]).every(p => items.some(m => m.personne === p));
+        return (complete ? (items.some(m => m.known) ? 'known' : 'review') : 'practice') !== body.target;
+      }));
+      if (body.target === 'practice') {
+        data.mastered = data.mastered.filter(m => !selected.has(key(m.verbe, m.temps)));
+        for (const id of selected) { const priority = id + '|je'; if (!data.settings.priority_learn.includes(priority)) data.settings.priority_learn.push(priority); }
+        this.returnWords(data, selected);
+      } else {
+        for (const id of selected) {
+          const [verbe, temps] = id.split('|'), items = data.mastered.filter(m => key(m.verbe, m.temps) === id);
+          const complete = PERSONS.filter(p => this.forms(verbe, temps)[p]).every(p => items.some(m => m.personne === p));
+          const current = complete ? (items.some(m => m.known) ? 'known' : 'review') : 'practice';
+          if (current === body.target) continue;
+          if (complete && body.target === 'known') { for (const m of items) m.known = true; continue; }
+          data.mastered = data.mastered.filter(m => key(m.verbe, m.temps) !== id);
+          for (const p of PERSONS.filter(p => this.forms(verbe, temps)[p])) this.addMastery(data, { verbe, temps }, p);
+          for (const m of data.mastered.filter(m => key(m.verbe, m.temps) === id)) m.known = body.target === 'known';
+        }
+        this.returnWords(data, selected, true);
+      }
+      this.updateReview(data);
+      result = { ok: true, next: data.active?.question || this.next(data) };
+    }
+    else if (path === 'session/start') {
+      for (const saved of Object.values(data.progress)) this.pruneCompleted(data, saved);
+      result = this.start(data, body);
+    }
+    else if (path === 'session/resume') { this.pruneCompleted(data, data.active); result = data.active?.question || this.next(data); }
     else if (path === 'session/answer') result = this.answer(data, body);
     else if (path === 'settings') {
       if ('daily_goal' in body) { require(Number.isInteger(body.daily_goal) && body.daily_goal >= 1 && body.daily_goal <= 100, '每日目标需为 1–100 个动词。'); data.settings.daily_goal = body.daily_goal; }

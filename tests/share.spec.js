@@ -7,7 +7,10 @@ test('share real word counts, change quote, choose covers, upload a photo and ex
   const { errors, unexpected } = await offlineApp(page, context);
   await page.getByRole('button', { name: '底部导航：学习' }).click();
   await page.getByRole('button', { name: '开始这一组' }).click();
-  for (let i = 0; i < 3; i++) await page.getByRole('button', { name: '已经掌握', exact: true }).click();
+  for (let i = 0; i < 3; i++) {
+    await page.getByRole('button', { name: '熟悉，加入已会', exact: true }).click();
+    await page.getByRole('button', { name: '确认熟悉', exact: true }).click();
+  }
   await page.getByRole('button', { name: '分享这次进步' }).click();
   await expect(page.locator('.share-stat-caption')).toContainText('累计 3 个动词');
   await expect(page.locator('.share-stat-caption')).toContainText('今日 3 个动词');

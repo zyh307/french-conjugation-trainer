@@ -98,6 +98,28 @@ def share_stats():
     return {'total_words': len(journal), 'today_words': len(verbs), 'today_verbs': verbs, 'date': today}
 
 
+def update_notebooks():
+    items = core.charger_maitrises()
+    groups = {}
+    data = all_data()
+    today = core.get_today()
+    for m in items:
+        m['days'] = (date.fromisoformat(today) - date.fromisoformat(m['date_learned'])).days + 1
+        groups.setdefault((m['verbe'], m['temps']), []).append(m)
+    review = []
+    for (v, t), members in groups.items():
+        complete = all(any(m['personne'] == p for m in members) for p in PERSONS if (v, t, p) in data)
+        known = complete and (any(m.get('known') for m in members) or min(m['days'] for m in members) >= 30)
+        for m in members:
+            m['known'] = known
+            m['needs_review'] = complete and not known and m['days'] in (2, 4, 7, 15) and m.get('last_review_day') != today
+            if m['needs_review']:
+                review.append({'verbe': v, 'temps': t, 'personne': m['personne'], 'due_date': today})
+    require(core.sauvegarder_maitrises(items), '学习记录保存失败。')
+    require(core.sauvegarder_review(review), '复习记录保存失败。')
+    return review
+
+
 class Studio:
     def __init__(self):
         self.session = None
@@ -164,7 +186,7 @@ class Studio:
         require(mode in ('learn', 'review'), '未知的练习类型。')
         self.mode = mode
         if mode == 'review':
-            items = sorted(core.get_review_list(), key=lambda x: (x['verbe'], x['temps'], PERSONS.index(x['personne'])))
+            items = sorted(update_notebooks(), key=lambda x: (x['verbe'], x['temps'], PERSONS.index(x['personne'])))
             self.session = items
             self.review_total = len(items)
             self.review_done = 0
@@ -203,6 +225,12 @@ class Studio:
         core.sauvegarder_settings(persisted_settings)
         if saved.get('queue') or saved.get('schedule'):
             s.scheduler = GroupedPractice.from_progress(saved, settings)
+            if not direct:
+                members = core.charger_maitrises()
+                completed = {m['verbe'] + '|' + m['temps'] for m in members if all(any(e['verbe'] == m['verbe'] and e['temps'] == m['temps'] and e['personne'] == p for e in members) for p in PERSONS if (m['verbe'], m['temps'], p) in data)}
+                s.scheduler.remove_words(completed)
+                if saved.get('question') and saved['question']['verbe'] + '|' + saved['question']['temps'] in completed:
+                    saved = {**saved, 'question': None}
             s.done = saved.get('done', 0)
             self.question = saved.get('question') if saved.get('schedule', {}).get('version') == GroupedPractice.VERSION else None
             if self.question:
@@ -237,6 +265,13 @@ class Studio:
         return entry
 
     def resume(self):
+        update_notebooks()
+        if self.mode == 'review' and self.session:
+            known = {(m['verbe'], m['temps']) for m in core.charger_maitrises() if m.get('known')}
+            self.session = [e for e in self.session if (e['verbe'], e['temps']) not in known]
+            if self.question and (self.question['verbe'], self.question['temps']) in known:
+                self.question = None
+                return self.next_question()
         saved = core.charger_json(ACTIVE, {})
         if self.session:
             return self.question or self.next_question()
@@ -245,6 +280,10 @@ class Studio:
                 return self.start({'level': saved['level'], 'tense': saved['temps'], 'verb': saved['verb']}, saved)
             return self.start({'level': saved['level'], 'tense': saved['temps'], 'resume': True})
         if saved.get('mode') == 'review' and saved.get('items'):
+            known = {(m['verbe'], m['temps']) for m in core.charger_maitrises() if m.get('known')}
+            saved['items'] = [e for e in saved['items'] if (e['verbe'], e['temps']) not in known]
+            if saved.get('question') and (saved['question']['verbe'], saved['question']['temps']) in known:
+                saved['question'] = None
             self.mode = 'review'
             self.session = saved['items']
             self.review_total = saved['total']
@@ -255,6 +294,9 @@ class Studio:
 
     def next_question(self):
         if self.mode == 'review':
+            update_notebooks()
+            known = {(m['verbe'], m['temps']) for m in core.charger_maitrises() if m.get('known')}
+            self.session = [e for e in self.session if (e['verbe'], e['temps']) not in known]
             if not self.session:
                 return self.finish()
             entry = self.session[0]
@@ -301,6 +343,11 @@ class Studio:
             record(correct)
             if correct:
                 core.complete_review(entry['verbe'], entry['temps'], entry['personne'])
+                members = core.charger_maitrises()
+                for m in members:
+                    if all(m[k] == entry[k] for k in ('verbe', 'temps', 'personne')):
+                        m['last_review_day'] = core.get_today()
+                core.sauvegarder_maitrises(members)
                 self.session.pop(0)
                 self.review_done += 1
                 if not any(e['verbe'] == entry['verbe'] and e['temps'] == entry['temps'] for e in self.session):
@@ -318,6 +365,11 @@ class Studio:
                 for p in entry['personnes']:
                     core.ajouter_maitrise(entry['verbe'], entry['temps'], p)
                 record_completed_word(entry['verbe'], entry['temps'])
+                members = core.charger_maitrises()
+                for m in members:
+                    if m['verbe'] == entry['verbe'] and m['temps'] == entry['temps']:
+                        m['known'] = True
+                core.sauvegarder_maitrises(members)
             s.scheduler.judge(choice)
             if choice != 1 and not any(s.settings.get('enable_' + r) for r in ('reverse', 'choice', 'fill')):
                 for p in entry['personnes']:
@@ -348,7 +400,7 @@ class Studio:
         return {'correct': correct, 'expected': expected, 'next': self.next_question()}
 
     def state(self):
-        review = core.get_review_list()
+        review = update_notebooks()
         mastered = core.charger_maitrises()
         errors = [dict(zip(('verbe', 'temps', 'personne', 'conjugaison'), (*key, value))) for key, value in core.charger_erreurs().items()]
         lists = []
@@ -361,7 +413,7 @@ class Studio:
                 'settings': core.charger_settings(), 'wordlists': lists, 'verbs': core.get_all_verbs(),
                 'history': core.charger_json(HISTORY, {}), 'favorites': list(core.charger_json(core.FILES['favorites'], {}).values()), 'active': bool(core.charger_json(ACTIVE, {}).get('mode')), 'share_stats': share_stats()}
 
-    def return_words(self, selected):
+    def return_words(self, selected, remove_only=False):
         def affected(e):
             return e.get('verbe', '') + '|' + e.get('temps', '') in selected
 
@@ -400,7 +452,10 @@ class Studio:
             if not entries:
                 return saved
             scheduler = GroupedPractice.from_progress(saved, saved['settings'])
-            scheduler.return_words(entries)
+            if remove_only:
+                scheduler.remove_words(selected)
+            else:
+                scheduler.return_words(entries)
             current = scheduler.current()
             saved.update(schedule=scheduler.state, queue=[current] if current else [], post_entries=[], index=0,
                          pending_groups=scheduler.state['groups'][scheduler.state['cursor'] + 1:], **scheduler.batch_info())
@@ -429,6 +484,44 @@ class Studio:
         self.question = None
 
     def mutate(self, path, body):
+        if path == '/api/notebooks/move':
+            update_notebooks()
+            selected = set(body.get('keys', []))
+            target = body.get('target')
+            require(bool(selected) and target in ('practice', 'review', 'known'), '请选择有效的词条和目标本。')
+            for k in selected:
+                parts = k.split('|')
+                require(len(parts) == 2 and (parts[0], parts[1], 'je') in all_data(), '请选择有效的动词和时态。')
+            members = core.charger_maitrises()
+            settings = core.charger_settings()
+            changed = set()
+            for k in selected:
+                v, t = k.split('|')
+                current = [m for m in members if m['verbe'] == v and m['temps'] == t]
+                complete = all(any(m['personne'] == p for m in current) for p in PERSONS if (v, t, p) in all_data())
+                source = ('known' if any(m.get('known') for m in current) else 'review') if complete else 'practice'
+                if source == target:
+                    continue
+                changed.add(k)
+                if complete and target == 'known':
+                    for m in current:
+                        m['known'] = True
+                    continue
+                members = [m for m in members if not (m['verbe'] == v and m['temps'] == t)]
+                if target == 'practice':
+                    priority = core.entry_to_key(v, t, 'je')
+                    if priority not in settings['priority_learn']:
+                        settings['priority_learn'].append(priority)
+                else:
+                    members.extend({'verbe': v, 'temps': t, 'personne': p, 'date_learned': core.get_today(), 'days': 1, 'known': target == 'known', 'needs_review': False, 'review_completed': False} for p in PERSONS if (v, t, p) in all_data())
+            require(core.sauvegarder_maitrises(members), '学习记录保存失败。')
+            core.sauvegarder_settings(settings)
+            for k in selected:
+                record_completed_word(*k.split('|'))
+            if changed:
+                self.return_words(changed, remove_only=target != 'practice')
+            update_notebooks()
+            return {'ok': True, 'next': self.resume()}
         if path == '/api/favorites/toggle':
             verb, tense = body.get('verb'), body.get('tense')
             require(tense in TENSES and (verb, tense, 'je') in all_data(), '请选择有效的动词和时态。')

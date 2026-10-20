@@ -32,14 +32,14 @@ test('wordbook direct practice, learned filter, returning a word and editing wor
   }
   await expect(page.getByRole('heading', { name: '这一组，漂亮完成。' })).toBeVisible();
   await page.getByRole('button', { name: '回到学习空间' }).click();
-  await page.getByRole('button', { name: '已背', exact: true }).click();
+  await page.getByRole('group', { name: '单词本分类' }).getByRole('button', { name: '复习本', exact: true }).click();
   await expect(page.locator('.verb-list')).toContainText('être');
-  await expect(page.locator('.verb-list')).toContainText('已背 1 天');
   await expect(page.locator('.tense-table-card').first()).toContainText('已背 1 天');
-  await expect(page.locator('.tense-table-card').nth(1)).toContainText('待学习');
+  await expect(page.locator('.tense-table-card')).toHaveCount(1);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({ path: 'preview-wordbook-mobile.png', fullPage: true });
-  await page.getByRole('button', { name: '返回单词本 être 现在时', exact: true }).click();
+  await page.getByRole('button', { name: '放回练习本 être 现在时', exact: true }).click();
+  await page.getByRole('dialog').getByRole('button', { name: '确认转移', exact: true }).click();
   await expect(page.locator('.verb-list')).not.toContainText('être');
   await page.getByRole('button', { name: '底部导航：总览' }).click();
   await expect(page.locator('.daily-card')).toContainText('今日完成动词');
@@ -48,7 +48,7 @@ test('wordbook direct practice, learned filter, returning a word and editing wor
   await page.getByRole('button', { name: '开始这一组' }).click();
   await expect(page.locator('.practice-question h1')).toHaveText('être');
   await expect(page.locator('.practice-question .verb-meaning')).toHaveText('是；处于');
-  const bounds = await page.getByRole('button', { name: '已经掌握', exact: true }).boundingBox();
+  const bounds = await page.getByRole('button', { name: '熟悉，加入已会', exact: true }).boundingBox();
   expect(bounds.y + bounds.height).toBeLessThan(790);
   expect(errors).toEqual([]); expect(unexpected).toEqual([]);
 });

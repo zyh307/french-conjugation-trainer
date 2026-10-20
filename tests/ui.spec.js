@@ -37,7 +37,7 @@ test('desktop dashboard, dictionary, theme, search, practice, resume and mobile'
   await page.reload();
   await expect(page.getByRole('switch', { name: '模糊匹配', exact: true })).toHaveAttribute('aria-checked', initial === 'true' ? 'false' : 'true');
 
-  await page.getByRole('button', { name: '开始学习', exact: true }).click();
+  await page.getByRole('button', { name: '练习本', exact: true }).click();
   await page.getByLabel('动词数量').fill('1');
   await page.getByRole('button', { name: '开始这一组' }).click();
   await expect(page.locator('.conjugation-grid')).toBeVisible();

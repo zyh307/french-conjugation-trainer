@@ -41,6 +41,45 @@ class StudioTests(unittest.TestCase):
         self.assertTrue(all(item['total'] > 0 for item in state['wordlists']))
         self.assertIn('être', state['verbs'])
 
+    def test_notebook_transfer_is_per_tense_and_preserves_other_questions(self):
+        q = self.studio.start({'count': 6})
+        other = next(v for v in q['batch_verbs'] if v != q['verbe'])
+        result = self.studio.mutate('/api/notebooks/move', {'keys': [other + '|现在时'], 'target': 'review'})
+        self.assertEqual(result['next']['id'], q['id'])
+        items = core.charger_maitrises()
+        self.assertEqual(len(items), 6)
+        self.assertTrue(all(m['temps'] == '现在时' and not m['known'] for m in items))
+        self.studio.mutate('/api/notebooks/move', {'keys': [other + '|现在时'], 'target': 'review'})
+        self.assertEqual(core.charger_maitrises(), items)
+        self.studio.mutate('/api/notebooks/move', {'keys': [other + '|现在时'], 'target': 'known'})
+        self.assertTrue(all(m['known'] for m in core.charger_maitrises()))
+        self.assertEqual(self.studio.state()['review'], [])
+        self.assertEqual([m['date_learned'] for m in core.charger_maitrises()], [m['date_learned'] for m in items])
+        result = self.studio.mutate('/api/notebooks/move', {'keys': [other + '|现在时'], 'target': 'practice'})
+        self.assertEqual(result['next']['id'], q['id'])
+        self.assertEqual(core.charger_maitrises(), [])
+        self.assertIn(other + '|现在时|je', core.charger_settings()['priority_learn'])
+
+    def test_notebook_auto_promotion_and_legacy_partial_migration(self):
+        for p in server.PERSONS:
+            core.ajouter_maitrise('être', '现在时', p, core.add_days(core.get_today(), -35))
+        core.ajouter_maitrise('avoir', '现在时', 'je', core.add_days(core.get_today(), -35))
+        state = self.studio.state()
+        self.assertTrue(all(m['known'] for m in state['mastered'] if m['verbe'] == 'être'))
+        self.assertTrue(all(not m['known'] for m in state['mastered'] if m['verbe'] == 'avoir'))
+        self.assertEqual(state['review'], [])
+
+    def test_familiar_skips_review_and_direct_practice_preserves_known(self):
+        q = self.studio.start({'count': 1})
+        self.studio.answer({'id': q['id'], 'choice': 1})
+        items = core.charger_maitrises()
+        self.assertTrue(all(m['known'] for m in items))
+        q = self.studio.start({'verb': q['verbe'], 'tense': q['temps']})
+        while not q.get('completed'):
+            q = self.solve(q)['next']
+        self.assertEqual([m['date_learned'] for m in core.charger_maitrises()], [m['date_learned'] for m in items])
+        self.assertTrue(all(m['known'] for m in core.charger_maitrises()))
+
     def test_fuzzy_and_strict_answers(self):
         self.assertTrue(core.verifier_reponse('ETES', 'êtes', True))
         self.assertFalse(core.verifier_reponse('ETES', 'êtes', False))
@@ -158,7 +197,7 @@ class StudioTests(unittest.TestCase):
         favorites = self.studio.state()['favorites']
         self.assertTrue(all(f['practice_count'] == 1 and f['last_practiced'] for f in favorites))
         self.assertEqual(core.get_progress('必会', '现在时'), saved)
-        self.assertEqual(self.studio.start({})['id'], regular['id'])
+        self.assertNotEqual(self.studio.start({})['verbe'], 'être')
         q = self.studio.start({'verb': 'être', 'tense': '现在时'})
         while not q.get('completed'):
             q = self.solve(q)['next']
@@ -222,13 +261,15 @@ class StudioTests(unittest.TestCase):
         self.assertEqual(len(core.charger_maitrises()), 6)
 
     def test_review_uses_original_schedule_and_advances(self):
-        core.ajouter_maitrise('être', '现在时', 'je', core.add_days(core.get_today(), -1))
-        self.assertEqual(len(self.studio.state()['review']), 1)
+        for p in server.PERSONS:
+            core.ajouter_maitrise('être', '现在时', p, core.add_days(core.get_today(), -1))
+        self.assertEqual(len(self.studio.state()['review']), 6)
         q = self.studio.start({'mode': 'review'})
-        self.assertEqual(q['personne'], 'je')
-        result = self.studio.answer({'id': q['id'], 'answer': 'suis'})
-        self.assertTrue(result['correct'])
-        self.assertTrue(result['next']['completed'])
+        for p in server.PERSONS:
+            result = self.studio.answer({'id': q['id'], 'answer': core.get_question_data(server.all_data(), q)['conjugaison']})
+            self.assertTrue(result['correct'])
+            q = result['next']
+        self.assertTrue(q['completed'])
         self.assertEqual(self.studio.state()['review'], [])
 
     def test_errors_delete_and_relearn(self):

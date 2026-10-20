@@ -8,8 +8,10 @@ test('favorite list, single practice, batch practice, completion records and per
   const { errors, unexpected } = await offlineApp(page, context);
   await page.getByRole('button', { name: '底部导航：词典' }).click();
   await page.getByRole('button', { name: '收藏 être 现在时', exact: true }).click();
+  await page.getByRole('dialog').getByRole('button', { name: '确认', exact: true }).click();
   await expect(page.getByRole('button', { name: '收藏 être 现在时', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await page.getByRole('button', { name: '收藏 être 复合过去时', exact: true }).click();
+  await page.getByRole('dialog').getByRole('button', { name: '确认', exact: true }).click();
   await page.getByRole('button', { name: '收藏', exact: true }).click();
   await expect(page.locator('.favorite-row')).toHaveCount(2);
   await expect(page.getByTestId('favorite-history-être-现在时')).toHaveText('尚未完成练习');
@@ -44,6 +46,7 @@ test('favorite list, single practice, batch practice, completion records and per
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({ path: 'preview-favorites-mobile.png', fullPage: true });
   await page.getByRole('button', { name: '移除收藏 être 复合过去时', exact: true }).click();
+  await page.getByRole('dialog').getByRole('button', { name: '确认移除', exact: true }).click();
   await expect(page.locator('.favorite-row')).toHaveCount(1);
   expect(errors).toEqual([]); expect(unexpected).toEqual([]);
 });
