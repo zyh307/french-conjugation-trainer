@@ -32,6 +32,8 @@ test('mobile notebook confirmation, exclusive ownership, direct transfer and pri
   await page.getByRole('button', { name: '打开导航', exact: true }).click();
   await page.locator('.sidebar').getByRole('button', { name: '已会本', exact: true }).click();
   await expect(page.locator('.notebook-row')).toHaveCount(2);
+  expect(await page.locator('.notebook-list').evaluate(el => parseFloat(getComputedStyle(el).paddingLeft))).toBeGreaterThanOrEqual(16);
+  await page.screenshot({ path: 'preview-notebooks-inset-mobile.png', fullPage: true });
   const row = page.locator('.notebook-row').filter({ hasText: last.verbe });
   await row.getByRole('button', { name: '放回练习本', exact: true }).click();
   await page.getByRole('button', { name: '再想想', exact: true }).click();
@@ -57,5 +59,6 @@ test('desktop notebook transfer dialog and known book persist after reload', asy
   await page.getByRole('button', { name: '回到学习空间' }).click();
   await page.locator('.sidebar').getByRole('button', { name: '已会本', exact: true }).click();
   await page.reload();
+  expect(await page.locator('.notebook-list').evaluate(el => parseFloat(getComputedStyle(el).paddingLeft))).toBeGreaterThanOrEqual(22);
   await expect(page.locator('.notebook-row').filter({ hasText: 'être' }).filter({ hasText: '复合过去时' })).toBeVisible();
 });

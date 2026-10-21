@@ -41,6 +41,16 @@ def require(condition, message):
         raise ValueError(message)
 
 
+def practice_hint(verb, expected):
+    length = sum(c.isalpha() for c in expected)
+    if not length:
+        return ''
+    stem, suffix = core.extraire_stem_et_suffixe(verb, expected)
+    if length <= 4 or not suffix or sum(c.isalpha() for c in suffix) < 2:
+        return f'答案长度：{length} 个字母'
+    return f'词干：{stem} + 后缀（{sum(c.isalpha() for c in suffix)} 个字母）'
+
+
 def record(correct):
     stats = core.charger_statistiques()
     (core.incrementer_correct if correct else core.incrementer_total)(stats)
@@ -324,7 +334,7 @@ class Studio:
                 elif q['round'] == 'choice':
                     q['options'] = s.get_options()
                 elif s.settings.get('show_stem', True):
-                    q['hint'] = core.generer_hint(data['stem'], data['suffixe'])
+                    q['hint'] = practice_hint(q['verbe'], data['conjugaison'])
         q['id'] = uuid.uuid4().hex
         self.question = q
         self.save()

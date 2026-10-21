@@ -11,6 +11,16 @@ const uid = () => globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.ran
 const shuffle = array => { for (let i = array.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [array[i], array[j]] = [array[j], array[i]]; } return array; };
 export const normalizeAnswer = value => String(value).normalize('NFKD').replace(/\p{M}/gu, '').replace(/[^\p{L}]/gu, '').toLowerCase();
 export const checkAnswer = (answer, expected, fuzzy) => Boolean(answer) && (fuzzy ? normalizeAnswer(answer) === normalizeAnswer(expected) : answer === expected);
+export function practiceHint(verb, expected) {
+  const letters = text => [...text].filter(c => /\p{L}/u.test(c)).length;
+  const length = letters(expected);
+  if (!length) return '';
+  const ending = ['er', 'ir', 're', 'oir'].find(s => verb.endsWith(s));
+  const stem = ending ? verb.slice(0, -ending.length) : '';
+  const suffix = stem && expected.startsWith(stem) ? expected.slice(stem.length) : '';
+  if (length <= 4 || !suffix || letters(suffix) < 2) return `答案长度：${length} 个字母`;
+  return `词干：${stem} + 后缀（${letters(suffix)} 个字母）`;
+}
 function localDay(date) { return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`; }
 const initial = () => ({ schema: 1, stats: { total: 0, correct: 0 }, settings: { fuzzy: true, show_stem: true, enable_reverse: true, enable_choice: true, enable_fill: true, priority_learn: [] }, mastered: [], errors: [], review: [], progress: {}, history: {}, word_history: {}, active: null });
 
@@ -261,9 +271,7 @@ export class DeviceStudio {
       else if (q.round === 'reverse') { q.display = forms[q.personne]; q.options = PERSONS; }
       else if (q.round === 'choice') q.options = this.options(s, q, forms[q.personne]);
       else if (s.settings.show_stem) {
-        const suffix = ['er', 'ir', 're', 'oir'].find(suffix => q.verbe.endsWith(suffix));
-        const stem = suffix && forms[q.personne].startsWith(q.verbe.slice(0, -suffix.length)) ? q.verbe.slice(0, -suffix.length) : forms[q.personne];
-        if (stem) q.hint = `词干：${stem} + 后缀（${forms[q.personne].length - stem.length}个字母）`;
+        q.hint = practiceHint(q.verbe, forms[q.personne]);
       }
     }
     q.id = uid(); s.question = q; this.saveSession(data); return q;

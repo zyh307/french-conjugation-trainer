@@ -38,8 +38,10 @@
 
 .notebook-summary,.practice-notebooks {display:flex;align-items:center;justify-content:space-between;gap:14px;padding:18px;margin-bottom:18px}
 .notebook-summary h2 {font-size:18px}.notebook-summary p {color:var(--muted);font-size:12px;line-height:1.7}
+.notebook-list {padding:0 22px}
 .notebook-row {display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 0;border-bottom:1px solid var(--line)}
 .notebook-row strong {font-size:20px}.notebook-row span,.notebook-row small{display:block;color:var(--muted);margin-top:6px;font-size:12px}
 .notebook-actions,.practice-notebooks>div{display:flex;flex-wrap:wrap;gap:8px}.practice-notebooks{margin:16px auto;max-width:760px;font-size:12px;color:var(--muted)}
 .verb-list-panel .segments{flex-wrap:wrap}.word-practice-actions{flex-wrap:wrap}
 @media(max-width:600px){.notebook-summary,.notebook-row,.practice-notebooks{align-items:flex-start;flex-direction:column}.notebook-actions{width:100%}.notebook-actions .button{flex:1;white-space:nowrap}.practice-notebooks>div{width:100%}.practice-notebooks .button{flex:1}}
+@media(max-width:600px){.notebook-list{padding:0 16px}}

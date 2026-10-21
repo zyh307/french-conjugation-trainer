@@ -15,7 +15,9 @@ test('wordbook direct practice, learned filter, returning a word and editing wor
   const forms = { je: 'suis', tu: 'es', il: 'est', nous: 'sommes', vous: 'êtes', ils: 'sont' };
   const label = p => ({ il: 'il / elle', ils: 'ils / elles' }[p] || p);
   for (let i = 0; i < 18; i++) {
+    await expect(page.locator('.practice-meaning')).toHaveText('是；处于');
     const stage = await page.locator('.practice-card-top .soft-badge').innerText();
+    if (stage === '拼写练习') await expect(page.locator('.stem-hint')).toHaveText(/^答案长度：[1-9]\d* 个字母$/);
     expect(stage).toBe(i < 6 ? '选择变位' : i < 12 ? '反向选择' : '拼写练习');
     if (stage === '反向选择') {
       const form = await page.locator('.practice-question h1').innerText();

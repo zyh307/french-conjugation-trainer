@@ -17,6 +17,15 @@ from server import core
 
 
 class StudioTests(unittest.TestCase):
+    def test_practice_hints_do_not_reveal_short_or_irregular_answers(self):
+        for verb, form in [('être', 'suis'), ('avoir', 'ai'), ('aller', 'va'), ('être', 'sommes'), ('parler', 'parle'), ('avoir', 'ai eu')]:
+            self.assertRegex(server.practice_hint(verb, form), r'^答案长度：[1-9]\d* 个字母$')
+        self.assertEqual(server.practice_hint('parler', 'parlons'), '词干：parl + 后缀（3 个字母）')
+        for (verb, tense, person), (form, stem, suffix) in server.all_data().items():
+            hint = server.practice_hint(verb, form)
+            self.assertNotRegex(hint, r'[（(]0\s*个')
+            self.assertFalse(hint.startswith('词干：' + form))
+
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory(prefix='conjugaison-tests-', dir=TEMP_ROOT)
         folder = Path(self.temp.name)

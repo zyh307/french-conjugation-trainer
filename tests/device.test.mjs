@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { DeviceStudio, checkAnswer } from '../src/device-core.js';
+import { DeviceStudio, checkAnswer, practiceHint } from '../src/device-core.js';
 import { verbMeanings } from '../src/verb-meanings.js';
 import { shareQuotes, nextQuote } from '../src/share-quotes.js';
 const wordlists = JSON.parse(readFileSync(new URL('../src/generated/wordlists.json', import.meta.url), 'utf8'));
@@ -11,6 +11,20 @@ function setup(clock) {
   return { studio: new DeviceStudio(wordlists, storage, clock), storage };
 }
 const solve = (studio, q) => studio.request('session/answer', { id: q.id, answer: q.round === 'reverse' ? q.personne : studio.forms(q.verbe, q.temps, q.level)[q.personne] });
+
+test('hints show length for short or irregular forms without exposing the answer or zero suffixes', () => {
+  for (const [verb, form] of [['être', 'suis'], ['avoir', 'ai'], ['aller', 'va'], ['être', 'sommes'], ['parler', 'parle'], ['avoir', 'ai eu']]) {
+    const hint = practiceHint(verb, form);
+    assert.match(hint, /^答案长度：[1-9]\d* 个字母$/);
+    assert.ok(!hint.includes(form));
+  }
+  assert.equal(practiceHint('parler', 'parlons'), '词干：parl + 后缀（3 个字母）');
+  for (const lists of Object.values(wordlists)) for (const verbs of Object.values(lists)) for (const [verb, forms] of Object.entries(verbs)) for (const form of Object.values(forms)) {
+    const hint = practiceHint(verb, form);
+    assert.doesNotMatch(hint, /[（(]0\s*个/);
+    assert.ok(!hint.startsWith(`词干：${form}`));
+  }
+});
 
 test('familiar judgment enters known book, never review; other tense stays in practice', () => {
   let now = new Date(2026, 9, 1); const { studio } = setup(() => now);
