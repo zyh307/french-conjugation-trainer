@@ -245,6 +245,7 @@ class Studio:
             self.question = saved.get('question') if saved.get('schedule', {}).get('version') == GroupedPractice.VERSION else None
             if self.question:
                 self.sync_schedule()
+                self.question.update(done=s.done, total=s.done + s.scheduler.remaining())
                 self.save()
                 return self.question
         else:
@@ -284,6 +285,8 @@ class Studio:
                 return self.next_question()
         saved = core.charger_json(ACTIVE, {})
         if self.session:
+            if self.mode == 'learn' and self.question:
+                self.question.update(done=self.session.done, total=self.session.done + self.session.scheduler.remaining())
             return self.question or self.next_question()
         if saved.get('mode') == 'learn' and saved.get('queue'):
             if saved.get('direct'):

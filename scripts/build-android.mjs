@@ -37,9 +37,9 @@ if (existsSync(secretPath)) secret = JSON.parse(readFileSync(secretPath, 'utf8')
 else { secret = { password: randomBytes(32).toString('hex') }; writeFileSync(secretPath, JSON.stringify(secret)); }
 const env = { ...process.env, CONJUGAISON_STORE_PASS: secret.password };
 if (!existsSync(store)) run(join(javaBin, 'keytool.exe'), ['-genkeypair', '-keystore', store, '-alias', 'conjugaison', '-keyalg', 'RSA', '-keysize', '2048', '-validity', '10000', '-storepass:env', 'CONJUGAISON_STORE_PASS', '-keypass:env', 'CONJUGAISON_STORE_PASS', '-dname', 'CN=Conjugaison Local,OU=Personal,O=Conjugaison,C=CN'], { env });
-const apk = join(output, '法语变位器-3.1.1.apk');
+const apk = join(output, '法语变位器-3.1.2.apk');
 run(join(javaBin, 'java.exe'), ['-jar', join(tools, 'lib/apksigner.jar'), 'sign', '--ks', store, '--ks-key-alias', 'conjugaison', '--ks-pass', 'env:CONJUGAISON_STORE_PASS', '--key-pass', 'env:CONJUGAISON_STORE_PASS', '--out', apk, join(build, 'aligned.apk')], { env });
 run(join(javaBin, 'java.exe'), ['-jar', join(tools, 'lib/apksigner.jar'), 'verify', '--verbose', '--print-certs', apk]);
 const hash = createHash('sha256').update(readFileSync(apk)).digest('hex');
-writeFileSync(join(output, 'SHA256.txt'), `${hash}  法语变位器-3.1.1.apk\n`);
+writeFileSync(join(output, 'SHA256.txt'), `${hash}  法语变位器-3.1.2.apk\n`);
 console.log(`\nAPK ready: ${apk}\nSHA-256: ${hash}`);

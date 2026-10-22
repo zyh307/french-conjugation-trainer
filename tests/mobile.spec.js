@@ -30,13 +30,16 @@ test('offline Android assets, three-verb order, compact question and persisted p
   for (let i = 0; i < 3; i++) {
     await expect(page.locator('.practice-batch')).toContainText('第 1 / 2 组');
     await expect(page.locator('.practice-card-top .soft-badge')).toHaveText('掌握度判断');
+    await expect(page.locator('.practice-progress')).toContainText(`${i} / ${6 + i * 18} 题`);
     verbs.push(await page.locator('.practice-question h1').innerText());
     // All three actions must fit without scrolling this 390 x 844 screen.
     const bounds = await page.getByRole('button', { name: '熟悉，加入已会', exact: true }).boundingBox();
     expect(bounds.y + bounds.height).toBeLessThan(790);
     if (i === 0) await page.screenshot({ path: 'preview-mobile-practice.png', fullPage: true });
-    await page.getByRole('button', { name: '还不熟悉', exact: true }).click();
+    await page.getByRole('button', { name: i === 0 ? '有点印象' : '还不熟悉', exact: true }).click();
   }
+  await expect(page.locator('.practice-progress')).toContainText('3 / 60 题');
+  await expect(page.getByRole('progressbar', { name: '本组练习进度' })).toHaveAttribute('aria-valuenow', '5');
   expect(new Set(verbs).size).toBe(3);
   await expect(page.locator('.practice-card-top .soft-badge')).toHaveText('选择变位');
   await page.screenshot({ path: 'preview-mobile-options.png', fullPage: true });

@@ -12,6 +12,37 @@ function setup(clock) {
 }
 const solve = (studio, q) => studio.request('session/answer', { id: q.id, answer: q.round === 'reverse' ? q.personne : studio.forms(q.verbe, q.temps, q.level)[q.personne] });
 
+test('progress counts only confirmed tasks and updates after every judgment, answer and restart', () => {
+  const { studio, storage } = setup();
+  let q = studio.request('session/start', { count: 3 });
+  assert.deepEqual([q.done, q.total], [0, 3]);
+  q = studio.request('session/answer', { id: q.id, choice: 2 }).next;
+  assert.deepEqual([q.done, q.total], [1, 21]);
+  const old = studio.read(); old.active.question.total = 999; studio.write(old);
+  q = new DeviceStudio(wordlists, storage).request('session/resume');
+  assert.deepEqual([q.done, q.total], [1, 21]);
+  q = studio.request('session/answer', { id: q.id, choice: 1 }).next;
+  assert.deepEqual([q.done, q.total], [2, 21]);
+  q = studio.request('session/answer', { id: q.id, choice: 3 }).next;
+  assert.deepEqual([q.done, q.total], [3, 39]);
+  q = studio.request('session/answer', { id: q.id, answer: 'incorrect' }).next;
+  assert.deepEqual([q.done, q.total], [3, 39]);
+  q = solve(studio, q).next;
+  assert.deepEqual([q.done, q.total], [4, 39]);
+  let answered = 1;
+  while (!q.completed) { q = solve(studio, q).next; answered++; }
+  assert.equal(answered, 36);
+});
+
+test('future batches and disabled rounds do not inflate the progress total', () => {
+  const { studio } = setup();
+  studio.request('settings', { enable_reverse: false, enable_fill: false });
+  let q = studio.request('session/start', { count: 6 });
+  assert.deepEqual([q.done, q.total], [0, 6]);
+  q = studio.request('session/answer', { id: q.id, choice: 2 }).next;
+  assert.deepEqual([q.done, q.total], [1, 12]);
+});
+
 test('hints show length for short or irregular forms without exposing the answer or zero suffixes', () => {
   for (const [verb, form] of [['être', 'suis'], ['avoir', 'ai'], ['aller', 'va'], ['être', 'sommes'], ['parler', 'parle'], ['avoir', 'ai eu']]) {
     const hint = practiceHint(verb, form);

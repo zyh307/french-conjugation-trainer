@@ -17,6 +17,31 @@ from server import core
 
 
 class StudioTests(unittest.TestCase):
+    def test_progress_counts_only_confirmed_tasks_and_restores_actual_total(self):
+        q = self.studio.start({'count': 3})
+        self.assertEqual((q['done'], q['total']), (0, 3))
+        q = self.studio.answer({'id': q['id'], 'choice': 2})['next']
+        self.assertEqual((q['done'], q['total']), (1, 21))
+        saved = core.get_progress('必会', '现在时')
+        saved['question']['total'] = 999
+        core.set_progress('必会', '现在时', saved)
+        self.studio = server.Studio()
+        q = self.studio.resume()
+        self.assertEqual((q['done'], q['total']), (1, 21))
+        q = self.studio.answer({'id': q['id'], 'choice': 1})['next']
+        self.assertEqual((q['done'], q['total']), (2, 21))
+        q = self.studio.answer({'id': q['id'], 'choice': 3})['next']
+        self.assertEqual((q['done'], q['total']), (3, 39))
+        q = self.studio.answer({'id': q['id'], 'answer': 'incorrect'})['next']
+        self.assertEqual((q['done'], q['total']), (3, 39))
+        q = self.solve(q)['next']
+        self.assertEqual((q['done'], q['total']), (4, 39))
+        answered = 1
+        while not q.get('completed'):
+            q = self.solve(q)['next']
+            answered += 1
+        self.assertEqual(answered, 36)
+
     def test_practice_hints_do_not_reveal_short_or_irregular_answers(self):
         for verb, form in [('être', 'suis'), ('avoir', 'ai'), ('aller', 'va'), ('être', 'sommes'), ('parler', 'parle'), ('avoir', 'ai eu')]:
             self.assertRegex(server.practice_hint(verb, form), r'^答案长度：[1-9]\d* 个字母$')

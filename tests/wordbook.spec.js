@@ -30,6 +30,7 @@ test('wordbook direct practice, learned filter, returning a word and editing wor
     }
     await page.getByRole('button', { name: '确认答案', exact: true }).click();
     await expect(page.locator('.answer-feedback')).toHaveClass(/correct/);
+    await expect(page.locator('.practice-progress')).toContainText(`${i + 1} / 18 题`);
     await page.getByRole('button', { name: '继续下一题', exact: true }).click();
   }
   await expect(page.getByRole('heading', { name: '这一组，漂亮完成。' })).toBeVisible();

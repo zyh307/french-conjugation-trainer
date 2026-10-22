@@ -170,9 +170,17 @@ class GroupedPractice:
 
     def remaining(self):
         s = self.state
-        future = sum(len(g.get('judge_keys', g['entries'])) + sum(len(e['personnes']) * len(s['rounds']) for e in g['entries']) for g in s['groups'][s['cursor'] + 1:])
-        if s['judges']:
-            return future + len(s['judges']) + sum(len(e['personnes']) * len(s['rounds']) for e in s['entries'] if s['decisions'].get(verb_key(e)) != 1)
+        def tasks(entry, group):
+            start = group.get('starts', {}).get(verb_key(entry), 0)
+            return len(entry['personnes']) * sum(ROUND_ORDER.index(r) >= start for r in s['rounds'])
+        future = 0
+        for group in s['groups'][s['cursor'] + 1:]:
+            judges = set(group.get('judge_keys', [verb_key(e) for e in group['entries']]))
+            future += sum(1 if verb_key(e) in judges else tasks(e, group) for e in group['entries'])
+        if s['cursor'] >= len(s['groups']):
+            return 0
+        if not s.get('prepared'):
+            return future + len(s['judges']) + sum(tasks(e, s['groups'][s['cursor']]) for e in s['entries'] if s['decisions'].get(verb_key(e)) in (2, 3))
         return future + sum(len(p['remaining']) + max(0, len(p['rounds']) - p['stage'] - 1) * len(p['personnes']) for p in s['plans'])
 
     def batch_info(self):

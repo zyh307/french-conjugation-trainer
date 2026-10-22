@@ -102,8 +102,13 @@ export class GroupedPractice {
   }
   remaining() {
     const s = this.state;
-    const future = s.groups.slice(s.cursor + 1).reduce((n, g) => n + (g.judge_keys || g.entries).length + g.entries.reduce((total, e) => total + e.personnes.length * s.rounds.length, 0), 0);
-    if (s.judges.length) return future + s.judges.length + s.entries.filter(e => s.decisions[key(e)] !== 1).reduce((n, e) => n + e.personnes.length * s.rounds.length, 0);
+    const tasks = (entry, group) => entry.personnes.length * s.rounds.filter(r => ORDER.indexOf(r) >= (group.starts?.[key(entry)] ?? 0)).length;
+    const future = s.groups.slice(s.cursor + 1).reduce((n, g) => {
+      const judges = new Set(g.judge_keys || g.entries.map(key));
+      return n + g.entries.reduce((total, e) => total + (judges.has(key(e)) ? 1 : tasks(e, g)), 0);
+    }, 0);
+    if (s.cursor >= s.groups.length) return 0;
+    if (!s.prepared) return future + s.judges.length + s.entries.filter(e => s.decisions[key(e)] != null && s.decisions[key(e)] !== 1).reduce((n, e) => n + tasks(e, s.groups[s.cursor]), 0);
     return future + s.plans.reduce((n, p) => n + p.remaining.length + Math.max(0, p.rounds.length - p.stage - 1) * p.personnes.length, 0);
   }
   batchInfo() { const s = this.state; return { batch_index: s.offset + s.cursor + 1, batch_count: s.offset + s.groups.length, batch_verbs: s.entries.map(e => e.verbe) }; }

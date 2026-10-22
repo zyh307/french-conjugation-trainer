@@ -136,6 +136,10 @@ export class DeviceStudio {
       session.schedule = GroupedPractice.fromProgress(session, session.settings).state;
       delete session.question;
     }
+    if (session.mode === 'learn' && session.question) {
+      session.question.done = session.done;
+      session.question.total = session.done + new GroupedPractice([], session.settings, session.schedule).remaining();
+    }
   }
   start(data, body) {
     const mode = body.mode || 'learn';
