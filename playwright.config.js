@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 const data = fileURLToPath(new URL(`./tests/.tmp/browser-data-${Date.now()}`, import.meta.url));
 export default defineConfig({
   testDir: './tests',
-  testMatch: ['ui.spec.js', 'mobile.spec.js', 'share.spec.js', 'wordbook.spec.js', 'favorites.spec.js', 'notebooks.spec.js'],
+  testMatch: ['ui.spec.js', 'mobile.spec.js', 'share.spec.js', 'wordbook.spec.js', 'favorites.spec.js', 'notebooks.spec.js', 'learning-wordlist.spec.js'],
   fullyParallel: false,
   workers: 1,
   reporter: 'list',

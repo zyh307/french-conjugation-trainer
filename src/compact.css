@@ -45,3 +45,6 @@
 .verb-list-panel .segments{flex-wrap:wrap}.word-practice-actions{flex-wrap:wrap}
 @media(max-width:600px){.notebook-summary,.notebook-row,.practice-notebooks{align-items:flex-start;flex-direction:column}.notebook-actions{width:100%}.notebook-actions .button{flex:1;white-space:nowrap}.practice-notebooks>div{width:100%}.practice-notebooks .button{flex:1}}
 @media(max-width:600px){.notebook-list{padding:0 16px}}
+
+.browse-wordlist-button{margin:14px 0}.wordlist-back{margin-bottom:20px}.learning-wordlist-page{max-width:960px}.learning-wordlist{padding:20px 22px}.learning-wordlist-rows{margin-top:12px}.learning-wordlist-rows>button{display:flex;align-items:center;justify-content:space-between;gap:16px;width:100%;padding:17px 8px;text-align:left;border-bottom:1px solid var(--line);font-size:18px;transition:background .24s,color .24s}.learning-wordlist-rows>button:hover{background:var(--accent-soft);color:var(--accent-strong)}.learning-wordlist-rows>button:active{background:var(--inset)}.wordlist-detail-layout{display:block}.learning-wordlist-rows>button>svg{color:var(--muted)}
+@media(max-width:600px){.learning-wordlist{padding:16px}.learning-wordlist-rows>button{font-size:17px;padding:16px 4px}}
